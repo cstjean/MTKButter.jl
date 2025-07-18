@@ -1,10 +1,43 @@
 export mtkbmodel
 
+struct PreSystem
+    equations_fn::Function
+    t
+    variables
+    parameters
+    name
+    description
+    systems
+    gui_metadata
+    continuous_events
+    discrete_events
+    defaults
+    costs
+    constraints # TODO: turn into `constraints_fn`
+    consolidate
+end
+function PreSystem(equations_fn::Function, t, variables, parameters;
+                   name, description, systems, gui_metadata, continuous_events, discrete_events, defaults, costs,
+                   constraints, consolidate)
+    return PreSystem(equations_fn, t, variables, parameters,
+                     name, description, systems, gui_metadata, continuous_events, discrete_events, defaults, costs,
+                     constraints, consolidate)
+end
+
+MTK.System(ps::PreSystem) =
+    System(MTK.flatten_equations(ps.equations_fn(ps.systems...)), ps.t, ps.variables, ps.parameters;
+           ps.name, ps.description, ps.systems, ps.gui_metadata, ps.continuous_events, ps.discrete_events, ps.defaults, ps.costs,
+           ps.constraints, ps.consolidate)
+Base.convert(::Type{MTK.AbstractSystem}, ps::PreSystem) = MTK.System(ps)
+
+MTK.mtkcompile(ps::MTKButter.PreSystem) = MTK.mtkcompile(System(ps))
+
 function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     # A copy of MTK's _model_macro. Changes:
     #   - Special-case parse_components
+    #   - equations becomes equations_fn
     if fullname isa Symbol
-        name, type = fullname, :System
+        name, type = fullname, :($MTKButter.PreSystem)
     else
         if fullname.head == :(::)
             name, type = fullname.args
@@ -34,7 +67,6 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     push!(exprs.args, :(parameters = []))
     # We build `System` by default
     push!(exprs.args, :(systems = ModelingToolkit.AbstractSystem[]))
-    push!(exprs.args, :(equations = Union{Equation, Vector{Equation}}[]))
     push!(exprs.args, :(defaults = Dict{Num, Union{Number, Symbol, Function}}()))
 
     Base.remove_linenums!(expr)
@@ -77,7 +109,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
         iv = dict[:independent_variable] = MTK.get_t(mod, :t)
     end
 
-    push!(exprs.args, :(push!(equations, $(eqs...))))
+    push!(exprs.args, :(equations_fn = ($(comps...),)->Union{$MTK.Equation, Vector{$MTK.Equation}}[$(eqs...)]))
     push!(exprs.args, :(push!(parameters, $(ps...))))
     push!(exprs.args, :(push!(systems, $(comps...))))
     push!(exprs.args, :(push!(variables, $(vs...))))
@@ -91,7 +123,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     @inline MTK.pop_structure_dict!.(
         Ref(dict), [:defaults, :kwargs, :structural_parameters])
 
-    sys = :($type($(MTK.flatten_equations)(equations), $iv, variables, parameters;
+    sys = :($type(equations_fn, $iv, variables, parameters;
         name, description = $description, systems, gui_metadata = $gui_metadata,
         continuous_events = [$(c_evts...)], discrete_events = [$(d_evts...)],
         defaults, costs = [$(costs...)], constraints = [$(cons...)], consolidate = $consolidate))
