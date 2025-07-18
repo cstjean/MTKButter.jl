@@ -1,7 +1,8 @@
 export mtkbmodel
 
 function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
-    # A complete copy of MTK's _model_macro
+    # A copy of MTK's _model_macro. Changes:
+    #   - Special-case parse_components
     if fullname isa Symbol
         name, type = fullname, :System
     else
@@ -39,8 +40,12 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     Base.remove_linenums!(expr)
     for arg in expr.args
         if arg.head == :macrocall
-            MTK.parse_model!(exprs.args, comps, ext, eqs, icon, vs, ps,
-                sps, c_evts, d_evts, cons, costs, dict, mod, arg, kwargs, where_types)
+            if arg.args[1] == Symbol("@components")
+                parse_components!(exprs.args, comps, dict, arg.args[end], kwargs)
+            else
+                MTK.parse_model!(exprs.args, comps, ext, eqs, icon, vs, ps,
+                                 sps, c_evts, d_evts, cons, costs, dict, mod, arg, kwargs, where_types)
+            end
         elseif arg.head == :block
             push!(exprs.args, arg)
         elseif arg.head == :if
@@ -110,6 +115,31 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     end
 
     :($name = $MTK.Model($f, $dict, $isconnector))
+end
+
+function parse_components!(exprs, cs, dict, compbody, kwargs)
+    dict[:components] = []
+    Base.remove_linenums!(compbody)
+    for arg in compbody.args
+        MLStyle.@match arg begin
+            Expr(:if, condition, x) => begin
+                handle_conditional_components(condition, dict, exprs, kwargs, x)
+            end
+            Expr(:if, condition, x, y) => begin
+                handle_conditional_components(condition, dict, exprs, kwargs, x, y)
+            end
+            # Either the arg is top level component declaration or an invalid cause - both are handled by `_parse_components`
+            _ => begin
+                comp_names, comps, expr_vec, varexpr = MTK._parse_components!(:(begin
+                        $arg
+                    end),
+                    kwargs)
+                push!(cs, comp_names...)
+                push!(dict[:components], comps...)
+                push!(exprs, varexpr, expr_vec)
+            end
+        end
+    end
 end
 
 macro mtkbmodel(fullname::Union{Expr, Symbol}, body)
