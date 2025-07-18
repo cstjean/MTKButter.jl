@@ -7,7 +7,7 @@ struct PreSystem
     parameters
     name
     description
-    systems
+    systems_dict
     gui_metadata
     continuous_events
     discrete_events
@@ -17,17 +17,30 @@ struct PreSystem
     consolidate
 end
 function PreSystem(equations_fn::Function, t, variables, parameters;
-                   name, description, systems, gui_metadata, continuous_events, discrete_events, defaults, costs,
+                   name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
                    constraints, consolidate)
     return PreSystem(equations_fn, t, variables, parameters,
-                     name, description, systems, gui_metadata, continuous_events, discrete_events, defaults, costs,
+                     name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
                      constraints, consolidate)
 end
+MTK.rename(ps::PreSystem, name::Symbol) = @set ps.name = name
 
-MTK.System(ps::PreSystem) =
-    System(MTK.flatten_equations(ps.equations_fn(ps.systems...)), ps.t, ps.variables, ps.parameters;
-           ps.name, ps.description, ps.systems, ps.gui_metadata, ps.continuous_events, ps.discrete_events, ps.defaults, ps.costs,
+function Base.show(io::IO, mime::MIME"text/plain", ps::PreSystem)
+    println(io, "--- PreSystem for ---")
+    show(io, mime, System(ps))
+end
+
+Base.getproperty(ps::PreSystem, prop::Symbol) =
+    hasfield(PreSystem, prop) ? getfield(ps, prop) :
+    getproperty(System(ps), prop)
+
+function MTK.System(ps::PreSystem)
+    systems = [System(MTK.rename(v, k)) for (k,v) in ps.systems_dict]
+    System(MTK.flatten_equations(ps.equations_fn(systems...)), ps.t, ps.variables, ps.parameters;
+           ps.name, ps.description, systems,
+           ps.gui_metadata, ps.continuous_events, ps.discrete_events, ps.defaults, ps.costs,
            ps.constraints, ps.consolidate)
+end
 Base.convert(::Type{MTK.AbstractSystem}, ps::PreSystem) = MTK.System(ps)
 
 MTK.mtkcompile(ps::MTKButter.PreSystem) = MTK.mtkcompile(System(ps))
@@ -36,6 +49,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     # A copy of MTK's _model_macro. Changes:
     #   - Special-case parse_components
     #   - equations becomes equations_fn
+    #   -
     if fullname isa Symbol
         name, type = fullname, :($MTKButter.PreSystem)
     else
@@ -66,7 +80,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     push!(exprs.args, :(variables = []))
     push!(exprs.args, :(parameters = []))
     # We build `System` by default
-    push!(exprs.args, :(systems = ModelingToolkit.AbstractSystem[]))
+    push!(exprs.args, :(systems_dict = $MTKButter.OrderedDict()))
     push!(exprs.args, :(defaults = Dict{Num, Union{Number, Symbol, Function}}()))
 
     Base.remove_linenums!(expr)
@@ -111,7 +125,6 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
 
     push!(exprs.args, :(equations_fn = ($(comps...),)->Union{$MTK.Equation, Vector{$MTK.Equation}}[$(eqs...)]))
     push!(exprs.args, :(push!(parameters, $(ps...))))
-    push!(exprs.args, :(push!(systems, $(comps...))))
     push!(exprs.args, :(push!(variables, $(vs...))))
 
     gui_metadata = isassigned(icon) > 0 ? MTK.GUIMetadata(GlobalRef(mod, name), icon[]) :
@@ -124,7 +137,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
         Ref(dict), [:defaults, :kwargs, :structural_parameters])
 
     sys = :($type(equations_fn, $iv, variables, parameters;
-        name, description = $description, systems, gui_metadata = $gui_metadata,
+        name, description = $description, systems_dict, gui_metadata = $gui_metadata,
         continuous_events = [$(c_evts...)], discrete_events = [$(d_evts...)],
         defaults, costs = [$(costs...)], constraints = [$(cons...)], consolidate = $consolidate))
 
@@ -154,22 +167,13 @@ function parse_components!(exprs, cs, dict, compbody, kwargs)
     Base.remove_linenums!(compbody)
     for arg in compbody.args
         MLStyle.@match arg begin
-            Expr(:if, condition, x) => begin
-                handle_conditional_components(condition, dict, exprs, kwargs, x)
+            Expr(:(=), lhs, _) => begin
+                push!(cs, lhs)
+                # push!(dict[:components], comps...)  # TODO
+                push!(exprs, arg)
+                push!(exprs, :(systems_dict[$(Expr(:quote, lhs))] = $lhs))
             end
-            Expr(:if, condition, x, y) => begin
-                handle_conditional_components(condition, dict, exprs, kwargs, x, y)
-            end
-            # Either the arg is top level component declaration or an invalid cause - both are handled by `_parse_components`
-            _ => begin
-                comp_names, comps, expr_vec, varexpr = MTK._parse_components!(:(begin
-                        $arg
-                    end),
-                    kwargs)
-                push!(cs, comp_names...)
-                push!(dict[:components], comps...)
-                push!(exprs, varexpr, expr_vec)
-            end
+            _ => error("Expression not handled (yet) - please file issue. ", arg)
         end
     end
 end
