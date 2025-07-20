@@ -32,16 +32,30 @@ end
 
 Base.getproperty(ps::PreSystem, prop::Symbol) =
     hasfield(PreSystem, prop) ? getfield(ps, prop) :
-    getproperty(System(ps), prop)
+    getproperty(System(ps), prop)  # inefficient, but it's OK!
 
 function MTK.System(ps::PreSystem)
-    systems = [System(MTK.rename(v, k)) for (k,v) in ps.systems_dict]
-    System(MTK.flatten_equations(ps.equations_fn(systems...)), ps.t, ps.variables, ps.parameters;
+    mix_systems = []  # keeps Vector{System} as is
+    systems = []
+    for (k, v) in ps.systems_dict
+        if v isa Vector
+            sys_arr = System[MTK.rename(ps, Symbol(k, :_, i))
+                             for (i, ps) in enumerate(v)]
+            push!(mix_systems, sys_arr)
+            push!(systems, sys_arr...)
+        else
+            sys = System(MTK.rename(v, k))
+            push!(mix_systems, sys)
+            push!(systems, sys)
+        end
+    end
+    System(MTK.flatten_equations(ps.equations_fn(mix_systems...)), ps.t, ps.variables, ps.parameters;
            ps.name, ps.description, systems,
            ps.gui_metadata, ps.continuous_events, ps.discrete_events, ps.defaults, ps.costs,
            ps.constraints, ps.consolidate)
 end
 Base.convert(::Type{MTK.AbstractSystem}, ps::PreSystem) = MTK.System(ps)
+Base.convert(::Type{MTK.System}, ps::PreSystem) = MTK.System(ps)
 
 MTK.mtkcompile(ps::MTKButter.PreSystem) = MTK.mtkcompile(System(ps))
 
