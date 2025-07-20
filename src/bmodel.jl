@@ -64,11 +64,13 @@ function (Accessors.set(ps::PreSystem, optic::ComposedFunction{O, PropertyLens{F
                                       @invoke(set(ps::Any, optic, val))
 end
 
-function (Accessors.set(ps::PreSystem, optic::PropertyLens{F}, val)::PreSystem) where F
-    haskey(ps.parameters_dict, F) ? @set(ps.defaults[ps.parameters_dict[F]] = val) :
-                                    @invoke(set(ps::Any, optic, val))
+function Accessors.set(ps::PreSystem, optic::PropertyLens{F}, val) where {F}
+    prefix, suffix = array_prefix(F), array_suffix(F)
+    haskey(ps.systems_dict, F)      ? @set(ps.systems_dict[F] = val) :
+    haskey(ps.systems_dict, prefix) ? @set(ps.systems_dict[prefix][suffix] = val) :
+    haskey(ps.parameters_dict, F)   ? @set(ps.defaults[ps.parameters_dict[F]] = val) :
+                                      @invoke(set(ps::Any, optic, val))
 end
-
 
 function MTK.System(ps::PreSystem)
     mix_systems = []  # keeps Vector{System} as is
