@@ -20,7 +20,7 @@ function PreSystem(equations_fn::Function, t, variables, parameters;
                    name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
                    constraints, consolidate)
     return PreSystem(equations_fn, t,
-                     Dict(Symbol(v)=>v for v in variables),
+                     Dict(Symbol(string(v)[1:findfirst('(', string(v))-1])=>v for v in variables),
                      Dict(Symbol(p)=>p for p in parameters),
                      name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
                      constraints, consolidate)
@@ -51,17 +51,14 @@ end
 
 component_lens(s::Symbol) = IndexLens(array_suffix(s)) ∘ PropertyLens(array_prefix(s))
 
-Base.getproperty(ps::PreSystem, prop::Symbol) =
-    hasfield(PreSystem, prop) ? getfield(ps, prop) :
-    haskey(ps.systems_dict, prop) ? MTK.rename(ps.systems_dict[prop], Symbol(ps.name, '₊', prop)) :
-    getproperty(System(ps), prop)  # inefficient!
-
-function (Accessors.set(ps::PreSystem, optic::ComposedFunction{O, PropertyLens{F}}, val)::PreSystem) where {O, F}
-    prefix, suffix = array_prefix(F), array_suffix(F)
-    haskey(ps.systems_dict, F)      ? @set(ps.systems_dict[F] = set(ps.systems_dict[F], optic.outer, val)) :
-    haskey(ps.systems_dict, prefix) ? @set(ps.systems_dict[prefix][suffix] =
-                                           set(ps.systems_dict[prefix][suffix], optic.outer, val)) :
-                                      @invoke(set(ps::Any, optic, val))
+function Base.getproperty(ps::PreSystem, prop::Symbol)
+    prefix, suffix = array_prefix(prop), array_suffix(prop)
+    hasfield(PreSystem, prop)        ? getfield(ps, prop) :
+    haskey(ps.systems_dict, prop)    ? MTK.rename(ps.systems_dict[prop], Symbol(ps.name, :₊, prop)) :
+    haskey(ps.systems_dict, prefix)  ? getproperty(ps, prefix)[suffix] :
+    haskey(ps.variables_dict, prop)  ? getproperty(System(ps), prop) :
+    haskey(ps.parameters_dict, prop) ? ps.parameters_dict[prop] :
+                                       error("Non-existent field, ", prop)
 end
 
 function Accessors.set(ps::PreSystem, optic::PropertyLens{F}, val) where {F}
