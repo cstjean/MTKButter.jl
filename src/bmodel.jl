@@ -33,6 +33,24 @@ function Base.show(io::IO, mime::MIME"text/plain", ps::PreSystem)
     show(io, mime, System(ps))
 end
 
+"""
+```jldoctest
+julia> MTKButter.array_prefix(:my_comps_3)
+:my_comps
+```
+Returns `nothing` otherwise.
+"""
+function array_prefix(s::Symbol)
+    i = findlast('_', string(s))
+    return i === nothing ? nothing : Symbol(string(s)[1:i-1])
+end
+function array_suffix(s::Symbol)
+    i = findlast('_', string(s))
+    return i === nothing ? nothing : tryparse(Int, string(s)[i+1:end])
+end
+
+component_lens(s::Symbol) = IndexLens(array_suffix(s)) ∘ PropertyLens(array_prefix(s))
+
 Base.getproperty(ps::PreSystem, prop::Symbol) =
     hasfield(PreSystem, prop) ? getfield(ps, prop) :
     haskey(ps.systems_dict, prop) ? MTK.rename(ps.systems_dict[prop], Symbol(ps.name, '₊', prop)) :
