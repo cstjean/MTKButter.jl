@@ -7,7 +7,7 @@ struct PreSystem
     parameters
     name
     description
-    systems_dict
+    systems_dict#::Dict{Symbol
     gui_metadata
     continuous_events
     discrete_events
@@ -24,7 +24,8 @@ function PreSystem(equations_fn::Function, t, variables, parameters;
                      constraints, consolidate)
 end
 MTK.rename(ps::PreSystem, name::Symbol) = @set ps.name = name
-
+MTK.rename(pss::Vector{PreSystem}, name::Symbol) =
+    [MTK.rename(ps, Symbol(name, :_, i)) for (i, ps) in enumerate(pss)]
 function Base.show(io::IO, mime::MIME"text/plain", ps::PreSystem)
     println(io, "--- PreSystem for ---")
     show(io, mime, System(ps))
@@ -39,8 +40,7 @@ function MTK.System(ps::PreSystem)
     systems = []
     for (k, v) in ps.systems_dict
         if v isa Vector
-            sys_arr = System[MTK.rename(ps, Symbol(k, :_, i))
-                             for (i, ps) in enumerate(v)]
+            sys_arr = System.(MTK.rename(v, k))
             push!(mix_systems, sys_arr)
             push!(systems, sys_arr...)
         else
