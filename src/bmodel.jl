@@ -57,8 +57,11 @@ Base.getproperty(ps::PreSystem, prop::Symbol) =
     getproperty(System(ps), prop)  # inefficient!
 
 function (Accessors.set(ps::PreSystem, optic::ComposedFunction{O, PropertyLens{F}}, val)::PreSystem) where {O, F}
-    haskey(ps.systems_dict, F) ? @set(ps.systems_dict[F] = set(ps.systems_dict[F], optic.outer, val)) :
-                                 @invoke(set(ps::Any, optic, val))
+    prefix, suffix = array_prefix(F), array_suffix(F)
+    haskey(ps.systems_dict, F)      ? @set(ps.systems_dict[F] = set(ps.systems_dict[F], optic.outer, val)) :
+    haskey(ps.systems_dict, prefix) ? @set(ps.systems_dict[prefix][suffix] =
+                                           set(ps.systems_dict[prefix][suffix], optic.outer, val)) :
+                                      @invoke(set(ps::Any, optic, val))
 end
 
 function (Accessors.set(ps::PreSystem, optic::PropertyLens{F}, val)::PreSystem) where F
