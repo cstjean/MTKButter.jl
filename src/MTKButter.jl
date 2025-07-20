@@ -3,6 +3,7 @@ module MTKButter
 using ModelingToolkit, MacroTools
 import ModelingToolkit as MTK
 using Accessors, MLStyle, OrderedCollections
+using MacroTools: postwalk
 
 include("bmodel.jl")
 

@@ -79,7 +79,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
         :kwargs => Dict{Symbol, Dict}(),
         :structural_parameters => Dict{Symbol, Dict}()
     )
-    comps = Union{Symbol, Expr}[]
+    comps = Symbol[]   # was Union{Expr, Symbol} in MTK, but I don't know how that'd happen!
     ext = []
     eqs = Expr[]
     icon = Ref{Union{String, MTK.URI}}()
@@ -177,9 +177,20 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     :($name = $MTK.Model($f, $dict, $isconnector))
 end
 
-function components_closure(comps, expr)
+""" Returns an Expr that defines an anonymous function accepting the components, in order. """
+function components_closure(comps::Vector{Symbol}, expr)
+    # Since we don't parse the RHS of the @components equations,
+    # we have to "guess" that when `some_comp_1` appears and
+    # `some_comp` is a LHS in the @components block, then
+    # `some_comp` is likely an array. So we transform `some_comp_1`
+    # into `some_comp[1]`
+    comp_dict = Dict(Symbol(c, :_, n) => :($c[$n]) for c in comps
+                     for n in 1:100)  # lazy and inefficient, but works for now
+    expr2 = postwalk(expr) do x
+        x isa Symbol ? get(comp_dict, x, x) : x
+    end
     :(function ($(comps...),)
-          $expr
+          $expr2
       end)
 end
 
