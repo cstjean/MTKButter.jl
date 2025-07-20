@@ -3,11 +3,11 @@ export mtkbmodel
 struct PreSystem
     equations_fn::Function
     t
-    variables
-    parameters
+    variables_dict::OrderedDict{Symbol, Any}
+    parameters_dict::OrderedDict{Symbol, Any}
     name
     description
-    systems_dict#::Dict{Symbol
+    systems_dict::OrderedDict{Symbol, Any}
     gui_metadata
     continuous_events
     discrete_events
@@ -19,7 +19,9 @@ end
 function PreSystem(equations_fn::Function, t, variables, parameters;
                    name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
                    constraints, consolidate)
-    return PreSystem(equations_fn, t, variables, parameters,
+    return PreSystem(equations_fn, t,
+                     Dict(Symbol(v)=>v for v in variables),
+                     Dict(Symbol(p)=>p for p in parameters),
                      name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
                      constraints, consolidate)
 end
@@ -61,7 +63,9 @@ function MTK.System(ps::PreSystem)
             push!(systems, sys)
         end
     end
-    System(MTK.flatten_equations(ps.equations_fn(mix_systems...)), ps.t, ps.variables, ps.parameters;
+    System(MTK.flatten_equations(ps.equations_fn(mix_systems...)), ps.t,
+           values(ps.variables_dict),
+           values(ps.parameters_dict);
            ps.name, ps.description, systems,
            ps.gui_metadata, ps.continuous_events, ps.discrete_events, ps.defaults, ps.costs,
            ps.constraints, ps.consolidate)
@@ -106,7 +110,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     push!(exprs.args, :(variables = []))
     push!(exprs.args, :(parameters = []))
     # We build `System` by default
-    push!(exprs.args, :(systems_dict = $MTKButter.OrderedDict()))
+    push!(exprs.args, :(systems_dict = $MTKButter.OrderedDict{Symbol, Any}()))
     push!(exprs.args, :(defaults = Dict{Num, Union{Number, Symbol, Function}}()))
 
     Base.remove_linenums!(expr)
