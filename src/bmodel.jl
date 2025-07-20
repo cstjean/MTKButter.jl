@@ -33,7 +33,19 @@ end
 
 Base.getproperty(ps::PreSystem, prop::Symbol) =
     hasfield(PreSystem, prop) ? getfield(ps, prop) :
-    getproperty(System(ps), prop)  # inefficient, but it's OK!
+    haskey(ps.systems_dict, prop) ? MTK.rename(ps.systems_dict[prop], Symbol(ps.name, '₊', prop)) :
+    getproperty(System(ps), prop)  # inefficient!
+
+function (Accessors.set(obj::PreSystem, optic::ComposedFunction{O, PropertyLens{F}}, val)::PreSystem) where {O, F}
+    hasfield(PreSystem, F) ? @invoke(set(obj::Any, optic, val)) :
+                             @set(obj.systems_dict[F] = set(obj.systems_dict[F], optic.outer, val))
+end
+
+function (Accessors.set(ps::PreSystem, optic::PropertyLens{F}, val)::PreSystem) where F
+    hasfield(PreSystem, F) ? @invoke(set(ps::Any, optic, val)) : #setproperties(ps, NamedTuple{(F,)}((val,))) :
+                             @set(ps.defaults[F] = val)
+end
+
 
 function MTK.System(ps::PreSystem)
     mix_systems = []  # keeps Vector{System} as is
