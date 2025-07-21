@@ -17,12 +17,13 @@ struct PreSystem
     consolidate
 end
 function PreSystem(equations_fn::Function, t, variables, parameters;
-                   name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
-                   constraints, consolidate)
+                   name, description, systems_dict, gui_metadata, continuous_events,
+                   discrete_events, defaults, costs, constraints, consolidate)
     return PreSystem(equations_fn, t,
                      Dict(Symbol(string(v)[1:findfirst('(', string(v))-1])=>v for v in variables),
                      Dict(Symbol(p)=>p for p in parameters),
-                     name, description, systems_dict, gui_metadata, continuous_events, discrete_events, defaults, costs,
+                     name, description, systems_dict, gui_metadata, continuous_events,
+                     discrete_events, defaults, costs,
                      constraints, consolidate)
 end
 MTK.rename(ps::PreSystem, name::Symbol) = @set ps.name = name
@@ -53,7 +54,7 @@ component_lens(s::Symbol) = IndexLens(array_suffix(s)) ∘ PropertyLens(array_pr
 
 function Base.getproperty(ps::PreSystem, prop::Symbol)
     prefix, suffix = array_prefix(prop), array_suffix(prop)
-    hasfield(PreSystem, prop)        ? getfield(ps, prop) :
+    hasfield(PreSystem, prop)        ? getfield(ps, prop) :  # temporary convenience. FIXME
     haskey(ps.systems_dict, prop)    ? MTK.rename(ps.systems_dict[prop], Symbol(ps.name, :₊, prop)) :
     haskey(ps.systems_dict, prefix)  ? getproperty(ps, prefix)[suffix] :
     haskey(ps.variables_dict, prop)  ? getproperty(System(ps), prop) :
@@ -70,8 +71,8 @@ function Accessors.set(ps::PreSystem, optic::PropertyLens{F}, val) where {F}
 end
 
 function MTK.System(ps::PreSystem)
-    mix_systems = []  # keeps Vector{System} as is
-    systems = []
+    mix_systems = Union{System, Vector{System}}[]
+    systems = System[]
     for (k, v) in ps.systems_dict
         if v isa Vector
             sys_arr = System.(MTK.rename(v, k))
@@ -98,8 +99,8 @@ MTK.mtkcompile(ps::MTKButter.PreSystem) = MTK.mtkcompile(System(ps))
 function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     # A copy of MTK's _model_macro. Changes:
     #   - Special-case parse_components
-    #   - equations becomes equations_fn
-    #   -
+    #   - Generates a `PreSystem`.
+    #   - equations becomes equations_fn (and other similar changes, see PreSystem)
     if fullname isa Symbol
         name, type = fullname, :($MTKButter.PreSystem)
     else
@@ -140,7 +141,8 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
                 parse_components!(exprs.args, comps, dict, arg.args[end], kwargs)
             else
                 MTK.parse_model!(exprs.args, comps, ext, eqs, icon, vs, ps,
-                                 sps, c_evts, d_evts, cons, costs, dict, mod, arg, kwargs, where_types)
+                                 sps, c_evts, d_evts, cons, costs, dict, mod, arg, kwargs,
+                                 where_types)
             end
         elseif arg.head == :block
             push!(exprs.args, arg)
