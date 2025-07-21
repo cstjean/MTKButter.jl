@@ -1,4 +1,4 @@
-export mtkbmodel
+export @mtkbmodel
 
 struct PreSystem
     equations_fn::Function
