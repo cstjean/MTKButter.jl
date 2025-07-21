@@ -20,7 +20,7 @@ function PreSystem(equations_fn::Function, t, variables, parameters;
                    name, description, systems_dict, gui_metadata, continuous_events,
                    discrete_events, defaults, costs, constraints, consolidate)
     return PreSystem(equations_fn, t,
-                     Dict(Symbol(string(v)[1:findfirst('(', string(v))-1])=>v for v in variables),
+                     Dict(Symbol(split(string(v), '(')[1])=>v for v in variables),
                      Dict(Symbol(p)=>p for p in parameters),
                      name, description, systems_dict, gui_metadata, continuous_events,
                      discrete_events, defaults, costs,
