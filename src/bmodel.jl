@@ -178,8 +178,9 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
         iv = dict[:independent_variable] = MTK.get_t(mod, :t)
     end
 
-    push!(exprs.args, :(equations_fn =
-        $(components_closure(comps, :(Union{$MTK.Equation, Vector{$MTK.Equation}}[$(eqs...)])))))
+    eq_closure = components_closure(comps, :(Union{$MTK.Equation,
+                                                   Vector{$MTK.Equation}}[$(eqs...)]))
+    push!(exprs.args, :(equations_fn = $eq_closure))
     push!(exprs.args, :(push!(parameters, $(ps...))))
     push!(exprs.args, :(push!(variables, $(vs...))))
 

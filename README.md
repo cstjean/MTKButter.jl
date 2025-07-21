@@ -7,5 +7,5 @@ MTKButter.jl provides an alternative implementation of
 [ModelingToolkit](https://github.com/SciML/ModelingToolkit.jl)'s `@mtkmodel`, that enables more
 flexible component definition / modification. The package is experimental and not yet registered.
 Because it reuses ModelingToolkit's implementation, most existing MTK functionalities should
-already work. Please [file an issue](https://github.com/cstjean/MTKButter.jl/issues) if you find
+work, but please [file an issue](https://github.com/cstjean/MTKButter.jl/issues) if you find
 a problem.
