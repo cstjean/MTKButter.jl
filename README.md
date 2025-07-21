@@ -30,7 +30,7 @@ end
         total_x(t)
     end
     @components begin
-        producers = fill(LinearXProducer(), 4)  # this now supports arbitrary Julia code
+        producers = fill(LinearXProducer(), 4)  # @components now supports arbitrary Julia code
     end
     @equations begin
         total_x ~ sum(p.x for p in producers)
@@ -41,6 +41,7 @@ end
 @named room1 = Room()  # @mtkcompile also works, but then @set cannot be used afterwards
 prob = ODEProblem(mtkcompile(room1), Dict(), (0, 100.0))
 
+# Let's create model variations starting from `room1`, using Accessors.jl.
 room2 = @set room1.producers_1.rate = 10     # use Accessors.@set to change a parameter
 room2b = @set room1.producers[1].rate = 10   # equivalent; component indexing works correctly
 room3 = @set room1.producers = [LinearXProducer()] # replace all the producers with a single one
@@ -76,3 +77,5 @@ Implementation-wise, the
  - `@mtkbmodel` introduces a new `PreSystem` type, that is convertible to `System`.
  - Instead of storing the equations, `PreSystem` contains a closure-to-build-the-equations.
    That way, the code to replace components is more straight-forward (I think?)
+ - MTKButter pirates the Model constructor, `some_model()` works (even without the `name` kwarg).
+   Beware that this seems to mess up precompilation.
