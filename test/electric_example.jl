@@ -78,7 +78,7 @@ end
     end
 end
 
-@mtkcompile rc_model = RCModel(resistor.R = 2.0)
+@mtkcompile rc_model = RCModel()  #(resistor.R = 2.0)
 u0 = [
     rc_model.capacitor.v => 0.0
 ]

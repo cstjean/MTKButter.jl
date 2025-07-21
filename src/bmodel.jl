@@ -15,16 +15,17 @@ struct PreSystem
     costs
     constraints # TODO: turn into `constraints_fn`
     consolidate
+    extends::Vector
 end
 function PreSystem(equations_fn::Function, t, variables, parameters;
                    name, description, systems_dict, gui_metadata, continuous_events,
-                   discrete_events, defaults, costs, constraints, consolidate)
+                   discrete_events, defaults, costs, constraints, consolidate, extends)
     return PreSystem(equations_fn, t,
                      Dict(Symbol(split(string(v), '(')[1])=>v for v in variables),
                      Dict(Symbol(p)=>p for p in parameters),
                      name, description, systems_dict, gui_metadata, continuous_events,
                      discrete_events, defaults, costs,
-                     constraints, consolidate)
+                     constraints, consolidate, extends)
 end
 MTK.rename(ps::PreSystem, name::Symbol) = @set ps.name = name
 MTK.rename(pss::Vector{PreSystem}, name::Symbol) =
@@ -196,13 +197,10 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     sys = :($type(equations_fn, $iv, variables, parameters;
         name, description = $description, systems_dict, gui_metadata = $gui_metadata,
         continuous_events = [$(c_evts...)], discrete_events = [$(d_evts...)],
-        defaults, costs = [$(costs...)], constraints = [$(cons...)], consolidate = $consolidate))
+        defaults, costs = [$(costs...)], constraints = [$(cons...)], consolidate = $consolidate,
+        extends = []))
 
-    if length(ext) == 0
-        push!(exprs.args, :(var"#___sys___" = $sys))
-    else
-        push!(exprs.args, :(var"#___sys___" = $extend($sys, [$(ext...)])))
-    end
+    push!(exprs.args, :(var"#___sys___" = $sys))
 
     isconnector && push!(exprs.args,
         :($Setfield.@set!(var"#___sys___".connector_type=$connector_type(var"#___sys___"))))
