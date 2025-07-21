@@ -241,10 +241,10 @@ function parse_components!(exprs, cs, dict, compbody, kwargs)
     Base.remove_linenums!(compbody)
     for arg in compbody.args
         MLStyle.@match arg begin
-            Expr(:(=), lhs, _) => begin
+            Expr(:(=), lhs, rhs) => begin
                 push!(cs, lhs)
                 # push!(dict[:components], comps...)  # TODO
-                push!(exprs, arg)
+                push!(kwargs, Expr(:kw, lhs, rhs))
                 push!(exprs, :(systems_dict[$(Expr(:quote, lhs))] = $lhs))
             end
             _ => error("Expression not handled (yet) - please file issue. ", arg)
