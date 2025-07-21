@@ -70,16 +70,19 @@ function Accessors.set(ps::PreSystem, optic::PropertyLens{F}, val) where {F}
                                       @invoke(set(ps::Any, optic, val))
 end
 
+MaybeSystem(ps::PreSystem) = System(ps)
+MaybeSystem(sys::System) = sys  # Necessary when the user has plain (non-MTKButter) components.
+
 function MTK.System(ps::PreSystem)
     mix_systems = Union{System, Vector{System}}[]
     systems = System[]
     for (k, v) in ps.systems_dict
         if v isa Vector
-            sys_arr = System.(MTK.rename(v, k))
+            sys_arr = MaybeSystem.(MTK.rename(v, k))
             push!(mix_systems, sys_arr)
             push!(systems, sys_arr...)
         else
-            sys = System(MTK.rename(v, k))
+            sys = MaybeSystem(MTK.rename(v, k))
             push!(mix_systems, sys)
             push!(systems, sys)
         end

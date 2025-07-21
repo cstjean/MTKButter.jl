@@ -10,6 +10,7 @@ MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 
 [compat]
 Accessors = "0.1.42"
@@ -18,4 +19,5 @@ MacroTools = "0.5.16"
 ModelingToolkit = "10.10.0"
 OrderedCollections = "1.8.1"
 Symbolics = "6.44.0"
+URIs = "1.6.1"
 julia = "1.10"
