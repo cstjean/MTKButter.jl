@@ -3,14 +3,11 @@
 [![Test workflow status](https://github.com/cstjean/MTKButter.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/cstjean/MTKButter.jl/actions/workflows/Test.yml?query=branch%3Amain)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
-MTKButter.jl provides an alternative implementation of
-[ModelingToolkit](https://github.com/SciML/ModelingToolkit.jl)'s `@mtkmodel` called `@mtkbmodel`,
+MTKButter.jl introduces `@mtkbmodel`: an alternative implementation of
+[ModelingToolkit](https://github.com/SciML/ModelingToolkit.jl)'s `@mtkmodel`,
 that enables more flexible component definition / modification.
 
-Because 99% of the work is done by the original ModelingToolkit code, everything should mostly work
-(our DAE code works the same as before), but beware the
-[known issues](https://github.com/cstjean/MTKButter.jl/issues). Let me know if anything fails
-that used to work.
+Demo:
 
 ```julia
 using MTKButter, DifferentialEquations, Test
@@ -61,13 +58,18 @@ room4 = @insert room1.producers[5] = LinearXProducer()  # add a fifth producer
 end
 
 room5 = @set room1.producers[2] = ExponentialXProducer() # Heterogeneous component vectors also
-                                                         # work. No need for interfaces.
+                                                         # work. No need for an interface.
 
 # Confirm that the results are correct
 prob = ODEProblem(mtkcompile(room5), Dict(), (0,5))
 sol = solve(prob, Tsit5())
 @test sol[room5.total_x][end] ≈ 5 + exp(5) + 5 + 5 rtol=0.01
 ```
+
+Because 99% of the work is done by the original ModelingToolkit code, everything should mostly work
+(our DAE code works the same as before), but beware the
+[known issues](https://github.com/cstjean/MTKButter.jl/issues). Let me know if anything fails
+that used to work.
 
 Implementation-wise, the
 [core differences](https://github.com/cstjean/MTKButter.jl/blob/master/src/bmodel.jl) are:
