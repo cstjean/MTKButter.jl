@@ -3,9 +3,7 @@
 [![Test workflow status](https://github.com/cstjean/MTKButter.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/cstjean/MTKButter.jl/actions/workflows/Test.yml?query=branch%3Amain)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
-MTKButter.jl introduces `@mtkbmodel`: an alternative implementation of
-[ModelingToolkit](https://github.com/SciML/ModelingToolkit.jl)'s `@mtkmodel`,
-that enables more flexible component definition / modification.
+MTKButter.jl introduces `@mtkbmodel`: an alternative (unofficial, experimental) implementation of [ModelingToolkit](https://github.com/SciML/ModelingToolkit.jl)'s `@mtkmodel`, that enables more flexible component definition / modification.
 
 Demo:
 
@@ -77,5 +75,5 @@ Implementation-wise, the
  - `@mtkbmodel` introduces a new `PreSystem` type, that is convertible to `System`.
  - Instead of storing the equations, `PreSystem` contains a closure-to-build-the-equations.
    That way, the code to replace components is more straight-forward (I think?)
- - MTKButter pirates the Model constructor, `some_model()` works (even without the `name` kwarg).
-   Beware that this seems to mess up precompilation.
+ - MTKButter pirates the Model constructor to make `some_model()` work (even without the `name`
+   kwarg).  Beware that this seems to mess up precompilation.
