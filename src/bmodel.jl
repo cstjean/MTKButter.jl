@@ -1,5 +1,22 @@
 export mtkbmodel
 
+""" Push/append all elements/vectors in `collections` onto `vec` """
+function push_append!(vec, collections...)
+    for c in collections
+        if c isa AbstractVector
+            append!(vec, c)
+        else
+            push!(vec, c)
+        end
+    end
+    return vec
+end
+
+""" Helper """
+construction_rename(obj, name::Symbol) = MTK.rename(obj, name)
+construction_rename(objs::Vector, name::Symbol) =
+    [MTK.rename(obj, Symbol(name, :_, i)) for (i, obj) in enumerate(objs)]
+
 function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
     # A copy of MTK's _model_macro. Changes:
     #   - Special-case parse_components
@@ -79,7 +96,7 @@ function _model_macro(mod, fullname::Union{Expr, Symbol}, expr, isconnector)
 
     push!(exprs.args, :(push!(equations, $(eqs...))))
     push!(exprs.args, :(push!(parameters, $(ps...))))
-    push!(exprs.args, :(push!(systems, $(comps...))))
+    push!(exprs.args, :($MTKButter.push_append!(systems, $(comps...))))
     push!(exprs.args, :(push!(variables, $(vs...))))
 
     gui_metadata = isassigned(icon) > 0 ? MTK.GUIMetadata(GlobalRef(mod, name), icon[]) :
@@ -123,21 +140,20 @@ function parse_components!(exprs, cs, dict, compbody, kwargs)
     for arg in compbody.args
         MLStyle.@match arg begin
             Expr(:if, condition, x) => begin
+                todo()
                 handle_conditional_components(condition, dict, exprs, kwargs, x)
             end
             Expr(:if, condition, x, y) => begin
+                todo()
                 handle_conditional_components(condition, dict, exprs, kwargs, x, y)
             end
-            # Either the arg is top level component declaration or an invalid cause - both are handled by `_parse_components`
-            _ => begin
-                comp_names, comps, expr_vec, varexpr = MTK._parse_components!(:(begin
-                        $arg
-                    end),
-                    kwargs)
-                push!(cs, comp_names...)
-                push!(dict[:components], comps...)
-                push!(exprs, varexpr, expr_vec)
+            Expr(:(=), lhs, rhs) => begin
+                push!(cs, lhs)
+                # push!(dict[:components], comps...)  # TODO
+                push!(kwargs, Expr(:kw, lhs, rhs))
+                push!(exprs, :($lhs = $MTKButter.construction_rename($rhs, $(Expr(:quote, lhs)))))
             end
+            _ => error("Expression not handled (yet) - please file issue. ", arg)
         end
     end
 end
