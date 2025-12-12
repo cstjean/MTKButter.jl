@@ -1,7 +1,7 @@
 name = "MTKButter"
 uuid = "ca26f490-bc68-4489-97cc-95a4c39097e5"
-authors = ["cstjean"]
 version = "0.1.0"
+authors = ["cstjean"]
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -16,7 +16,7 @@ URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 Accessors = "0.1.42"
 MLStyle = "0.4.17"
 MacroTools = "0.5.16"
-ModelingToolkit = "10.10.0"
+ModelingToolkit = "10.10.0, 11"
 OrderedCollections = "1.8.1"
 Symbolics = "6.44.0"
 URIs = "1.6.1"
